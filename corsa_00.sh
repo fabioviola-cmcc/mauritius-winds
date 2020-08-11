@@ -3,6 +3,11 @@
 # set appname
 APPNAME="[corsa_00]"
 
+# configuration
+POSTCLEAN=0
+PRECLEAN=1
+MOVE=0
+
 # load modules
 echo "[$APPNAME] -- Loading modules"
 module load intel19.5/19.5.281 intel19.5/szip/2.1.1 intel19.5/hdf5/1.10.5 intel19.5/netcdf/C_4.7.2-F_4.5.2_CXX_4.3.1 intel19.5/udunits/2.2.26 intel19.5/cdo/1.9.8 intel19.5/magics/3.3.1 intel19.5/ncview/2.1.8 intel19.5/nco/4.8.1 intel19.5/eccodes/2.12.5
@@ -20,9 +25,9 @@ pday=${proddate:6:2}
 
 # set paths
 echo "[$APPNAME] -- Setting paths"
-dirin=./IN/
-dirwork=./tmp/
-dirout=./OUT
+dirin=./workdir_00/IN/
+dirwork=./workdir_00/tmp/
+dirout=./workdir_00/OUT/
 finaldir=/work/opa/witoil-dev/witoil-glob-DATA/fcst_data/SK1/
 
 ####################################################
@@ -32,21 +37,31 @@ finaldir=/work/opa/witoil-dev/witoil-glob-DATA/fcst_data/SK1/
 ####################################################
 
 Procfile() {
-
+    
     fileg=$1
     name=`basename $1`
     datef=`echo $name | cut -c 4-7`
+
+    yearf=$2
+    monthf=$3
+    dayf=$4
+    hourf=$5
+    dateff="${yearf}-${monthf}-${dayf}"
+    
     hf=`echo $name | cut -c 16-17`
     ncfileo=MED_2020${datef}${hf}.nc
-
+    
     # What? Convert the grib to nc (1 timestep, a lot of variables)
-    cdo -r -f nc -t ecmwf copy $fileg ${dirwork}/tmp1.nc
+    cdo -r -f nc -t ecmwf copy $fileg ${dirwork}/tmp1_${datef}_${hf}.nc
+    
+    # set the timestep
+    cdo -settime,${hf}:00:00 -setdate,$dateff -settunits,hours -settaxis,1950-1-1,00:00 ${dirwork}/tmp1_${datef}_${hf}.nc ${dirwork}/tmp2_${datef}_${hf}.nc
 
     # crop
-    cdo sellonlatbox,-180,180,-90,90 ${dirwork}/tmp1.nc ${dirwork}/tmp2.nc
+    cdo sellonlatbox,-180,180,-90,90 ${dirwork}/tmp2_${datef}_${hf}.nc ${dirwork}/tmp3_${datef}_${hf}.nc
  
     # select only the desired variables
-    Cmd="ncks -h -O -d lon,57.,58. -d lat,-20.,-19. -v time,lon,lat,U10M,V10M ${dirwork}/tmp2.nc ${dirwork}/$ncfileo"
+    Cmd="ncks -h -O -d lon,57.,58. -d lat,-20.,-19. -v time,lon,lat,U10M,V10M ${dirwork}/tmp2_${datef}_${hf}.nc ${dirwork}/$ncfileo"
     eval $Cmd
 
 }
@@ -59,7 +74,9 @@ Procfile() {
 ####################################################
 
 # clean work directory
-rm ${dirwork}/* -f
+if [[ $PRECLEAN -eq 1 ]]; then
+    rm ${dirwork}/* -f
+fi
 
 # iterate over days
 for d in $(seq 0 2); do
@@ -95,7 +112,7 @@ for d in $(seq 0 2); do
         fileg=JLS${pmonth}${pday}0000${rmonth}${rday}${hh}001
         if [ -f $dirin/$fileg ] ; then
 	    echo "[$APPNAME] -- Processing file $fileg"
-            Procfile $dirin/$fileg
+            Procfile $dirin/$fileg $ryear $rmonth $rday $hh
         else
 	    echo "[$APPNAME] -- File $fileg not found"
             exit
@@ -113,9 +130,13 @@ for d in $(seq 0 2); do
 
     # clean work directory
     echo "[$APPNAME] -- Cleaning work directory..."
-    rm ${dirwork}/*
-
-    # move file to final directory
-    mv ${dirout}/$fileout $finaldir
+    if [[ $POSTCLEAN -eq 1 ]]; then     
+	rm ${dirwork}/*
+    fi
     
+    # move file to final directory
+    if [[ $MOVE -eq 1 ]]; then
+	mv ${dirout}/$fileout $finaldir
+    fi
+
 done
