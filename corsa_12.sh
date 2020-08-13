@@ -6,7 +6,7 @@ APPNAME="[corsa_12]"
 # configuration
 POSTCLEAN=1
 PRECLEAN=1
-MOVE=0
+MOVE=1
 
 # load modules
 echo "[$APPNAME] -- Loading modules"
@@ -61,7 +61,7 @@ Procfile() {
     cdo sellonlatbox,-180,180,-90,90 ${dirwork}/tmp2_${datef}_${hf}.nc ${dirwork}/tmp3_${datef}_${hf}.nc
  
     # select only the desired variables
-    Cmd="ncks -h -O -d lon,57.,58. -d lat,-20.,-19. -v time,lon,lat,U10M,V10M ${dirwork}/tmp2_${datef}_${hf}.nc ${dirwork}/$ncfileo"
+    Cmd="ncks -h -O -d lon,57.,58. -d lat,-21.,-19. -v time,lon,lat,U10M,V10M ${dirwork}/tmp2_${datef}_${hf}.nc ${dirwork}/$ncfileo"
     eval $Cmd
 
 }
@@ -79,7 +79,8 @@ if [[ $PRECLEAN -eq 1 ]]; then
 fi
 
 # iterate over days
-for d in $(seq 1 3); do
+# for d in $(seq 1 3); do
+for d in $(seq 1 1); do
 
     # determine the day to produce
     refdate=$(date -d "${proddate}+${d}days" "+%Y%m%d")

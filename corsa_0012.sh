@@ -4,9 +4,9 @@
 APPNAME="[corsa_00]"
 
 # configuration
-POSTCLEAN=1
+POSTCLEAN=0
 PRECLEAN=1
-MOVE=1
+MOVE=0
 
 # load modules
 echo "[$APPNAME] -- Loading modules"
@@ -25,9 +25,9 @@ pday=${proddate:6:2}
 
 # set paths
 echo "[$APPNAME] -- Setting paths"
-dirin=./workdir_00/IN/
-dirwork=./workdir_00/tmp/
-dirout=./workdir_00/OUT/
+dirin=./workdir_0012/IN/
+dirwork=./workdir_0012/tmp/
+dirout=./workdir_0012/OUT/
 finaldir=/work/opa/witoil-dev/witoil-glob-DATA/fcst_data/SK1/
 
 ####################################################
@@ -79,9 +79,17 @@ if [[ $PRECLEAN -eq 1 ]]; then
     rm ${dirwork}/* -f
 fi
 
+NUMDAYS=2
+
+# determine last file needed
+refdate=$(date -d "${proddate}+${NUMDAYS}days" "+%Y%m%d")
+ryear=${refdate:0:4}
+rmonth=${refdate:4:2}
+rday=${refdate:6:2}
+LASTFILE="/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/1h/grib/${pyear}${pmonth}${pday}/JLS${pmonth}${pday}1200${rmonth}${rday}23001"
+
 # iterate over days
-for d in $(seq 0 2); do
-# for d in $(seq 0 0); do
+for d in $(seq 0 $NUMDAYS); do
 
     # determine the day to produce
     refdate=$(date -d "${proddate}+${d}days" "+%Y%m%d")
@@ -103,15 +111,22 @@ for d in $(seq 0 2); do
     # copy original data
     echo "[$APPNAME] -- Copying original files /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/1h/grib/${pyear}${pmonth}${pday}/JLS${pmonth}${pday}0000${rmonth}${rday}*"
     cp /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/1h/grib/${pyear}${pmonth}${pday}/JLS${pmonth}${pday}0000${rmonth}${rday}* $dirin
+    cp /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/1h/grib/${pyear}${pmonth}${pday}/JLS${pmonth}${pday}1200${rmonth}${rday}* $dirin
 
     echo "[$APPNAME] -- Iterating over timesteps"
 	
     # iterate over timesteps
     for hh in $(seq 0 23) ; do
 	if [[ hh -le 9 ]]; then
-	    hh=0${hh}
+	    hhh=0${hh}
+	else
+	    hhh=$hh
 	fi
-        fileg=JLS${pmonth}${pday}0000${rmonth}${rday}${hh}001
+	if [[ hh -lt 13 ]]; then 
+            fileg=JLS${pmonth}${pday}0000${rmonth}${rday}${hhh}001
+	else
+	    fileg=JLS${pmonth}${pday}1200${rmonth}${rday}${hhh}001
+	fi
         if [ -f $dirin/$fileg ] ; then
 	    echo "[$APPNAME] -- Processing file $fileg"
             Procfile $dirin/$fileg $ryear $rmonth $rday $hh
