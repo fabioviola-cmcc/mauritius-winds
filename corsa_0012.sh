@@ -79,7 +79,7 @@ if [[ $PRECLEAN -eq 1 ]]; then
     rm ${dirwork}/* -f
 fi
 
-NUMDAYS=2
+NUMDAYS=5
 
 # determine last file needed
 refdate=$(date -d "${proddate}+${NUMDAYS}days" "+%Y%m%d")
@@ -91,8 +91,10 @@ LASTFILE="/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/1h/grib/
 # iterate over days
 for d in $(seq 0 $NUMDAYS); do
 
+     
     # determine the day to produce
     refdate=$(date -d "${proddate}+${d}days" "+%Y%m%d")
+    echo "====================================================================="
     echo "[$APPNAME] -- Processing date $refdate"
 
     # read parameters

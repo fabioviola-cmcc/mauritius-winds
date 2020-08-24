@@ -80,11 +80,12 @@ if [[ $PRECLEAN -eq 1 ]]; then
 fi
 
 # iterate over days
-for d in $(seq 0 2); do
+for d in $(seq 3 5); do
 # for d in $(seq 0 0); do
 
     # determine the day to produce
     refdate=$(date -d "${proddate}+${d}days" "+%Y%m%d")
+    echo "====================================================================="
     echo "[$APPNAME] -- Processing date $refdate"
 
     # read parameters

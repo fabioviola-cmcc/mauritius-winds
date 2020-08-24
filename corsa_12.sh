@@ -4,9 +4,9 @@
 APPNAME="[corsa_12]"
 
 # configuration
-POSTCLEAN=1
+POSTCLEAN=0
 PRECLEAN=1
-MOVE=1
+MOVE=0
 
 # load modules
 echo "[$APPNAME] -- Loading modules"
@@ -80,10 +80,11 @@ fi
 
 # iterate over days
 # for d in $(seq 1 3); do
-for d in $(seq 1 1); do
+for d in $(seq 1 5); do
 
     # determine the day to produce
     refdate=$(date -d "${proddate}+${d}days" "+%Y%m%d")
+    echo "====================================================================="
     echo "[$APPNAME] -- Processing date $refdate"
 
     # read parameters
