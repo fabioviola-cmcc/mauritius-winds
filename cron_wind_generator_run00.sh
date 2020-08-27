@@ -492,7 +492,7 @@ for d in $(seq 6 6); do
 
     # interpolate
     echo "[$APPNAME] [3+6h] [$ryear/$rmonth/$rday] -- Interpolating..."
-    cdo -inttime,${rhour}-${rmonth}-${rday},00:00,1hour ${dirwork}/${fileout}_MERGED ${dirwork}/${fileout}_INTERP 2>&1 | tee $LOGFILE
+    cdo -inttime,${ryear}-${rmonth}-${rday},00:00,1hour ${dirwork}/${fileout}_MERGED ${dirwork}/${fileout}_INTERP 2>&1 | tee $LOGFILE
     
     # remove last timestep
     echo "[$APPNAME] [3+6h] [$ryear/$rmonth/$rday] -- Removing the last timestep..."
