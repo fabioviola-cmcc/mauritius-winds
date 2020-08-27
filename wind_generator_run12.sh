@@ -1,20 +1,19 @@
 #!/bin/bash -l
 #
 # This script contains all the operations needed to generate
-# wind files for Mauritius in the morning. Run 00.
+# wind files for Mauritius in the morning. In the morning, at
+# 9, we don't have files for the 00 run yet. So we use the 12
 # run.
 # Invoked with the date today (let's call it DAY, for simplicity),
 # it will generate forecasts for the days:
-# - DAY+0 -- using 1h data
 # - DAY+1 -- using 1h data
 # - DAY+2 -- using 1h data
-# - DAY+3 -- using 1+3h data (1h until 6pm included)
-# - DAY+4 -- using 3h data
+# - DAY+3 -- using 1h data
+# - DAY+4 -- using 1+3h data (1h until 6am included)
 # - DAY+5 -- using 3h data
 # - DAY+6 -- using 3h+6h data
 # - DAY+7 -- using 6h
 # - DAY+8 -- using 6h
-#
 
 source $HOME/.bashrc
 
@@ -25,7 +24,7 @@ source $HOME/.bashrc
 #####################################################
 
 # set the app name
-APPNAME="CRON_WIND_RUN00"
+APPNAME="CRON_WIND_RUN12"
 
 # load modules
 echo "[$APPNAME] -- Loading modules"
@@ -43,19 +42,19 @@ pmonth=${proddate:4:2}
 pday=${proddate:6:2}
 
 # move final files? 1=YES, 0=NO
-MOVE=0
+MOVE=1
 POSTCLEAN=0
 
 # set paths
 echo "[$APPNAME] -- Setting paths"
-basedir=/work/opa/witoil-dev/agrandi/
-dirin=${basedir}/workdir_00/IN/
-dirwork=${basedir}/workdir_00/tmp/
-dirout=${basedir}/workdir_00/OUT/
+basedir=/work/opa/witoil-dev/mauritius/scripts/wind_generator/
+dirin=${basedir}/workdir_12/IN/
+dirwork=${basedir}/workdir_12/tmp/
+dirout=${basedir}/workdir_12/OUT/
 finaldir=/work/opa/witoil-dev/mauritius/winds/
 
 # log files
-LOGFILE=wind_generator_00.log
+LOGFILE=$basedir/wind_generator_12.log
 echo "=== Wind Generator -- $(date) ===" > $LOGFILE
 
 
@@ -126,13 +125,16 @@ Procfile() {
 #####################################################
 #
 # GENERATE 1H DATA
-# We generate data for DAY+0, DAY+1, DAY+2
+# We generate data for DAY+1, DAY+2, DAY+3
 #
 #####################################################
 
-
 # iterate over days
-for d in $(seq 0 2); do
+for d in $(seq 1 3); do
+
+    # clean
+    rm -rf $dirin/*
+    rm -rf $dirwork/*
 
     # determine the day to produce
     refdate=$(date -d "${proddate}+${d}days" "+%Y%m%d")
@@ -144,24 +146,10 @@ for d in $(seq 0 2); do
     rday=${refdate:6:2}
 	    
     # copy original 1h data
-    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/1h/grib/${pyear}${pmonth}${pday}/JLS${pmonth}${pday}0000${rmonth}${rday}*
+    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/1h/grib/${pyear}${pmonth}${pday}/JLS${pmonth}${pday}1200${rmonth}${rday}*
     echo "[$APPNAME] [1h] [$ryear/$rmonth/$rday] -- Copying original files ${filename}"
     cp $filename $dirin
 
-    # copy the first timestep from analysis folder, if we are processing the first day
-    if [[ $d -eq 0 ]]; then
-
-	prevdate=$(date -d "${proddate}-1days" "+%Y%m%d")
-	prevyear=${prevdate:0:4}
-	prevmonth=${prevdate:4:2}
-	prevday=${prevdate:6:2}
-	filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/1h/grib/${prevyear}${prevmonth}${prevday}/JLS${prevmonth}${prevday}0000${rmonth}${rday}00001
-	fileg=$(basename $filename)
-	echo "[$APPNAME] [1h] [$ryear/$rmonth/$rday] -- Processing file $fileg"
-	cp $filename $dirin
-	Procfile $dirin/$fileg $ryear $rmonth $rday 00
-    fi
-	
     # iterate over timesteps
     echo "[$APPNAME] [1h] [$ryear/$rmonth/$rday] -- Iterating over timesteps"
     for hh in $(seq 0 23) ; do
@@ -178,7 +166,7 @@ for d in $(seq 0 2); do
 	fi
 
 	# process the file
-        fileg=JLS${pmonth}${pday}0000${rmonth}${rday}${hh}001
+        fileg=JLS${pmonth}${pday}1200${rmonth}${rday}${hh}001
         if [ -f $dirin/$fileg ] ; then
 	    echo "[$APPNAME] [1h] [$ryear/$rmonth/$rday] -- Processing file $fileg"
             Procfile $dirin/$fileg $ryear $rmonth $rday $hh
@@ -201,7 +189,6 @@ for d in $(seq 0 2); do
 
     # check that file has been correctly generated
     if [[ ! -e ${dirout}/${fileout} ]]; then
-	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!"
 	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee $LOGFILE
     fi
        
@@ -217,13 +204,16 @@ done
 #####################################################
 #
 # GENERATE 1H+3H DATA
-# We generate data for DAY+3
+# We generate data for DAY+4
 #
 #####################################################
 
-
 # iterate over days
-for d in $(seq 3 3); do
+for d in $(seq 4 4); do
+
+    # clean
+    rm -rf $dirin/*
+    rm -rf $dirwork/*
 
     # determine the day to produce
     refdate=$(date -d "${proddate}+${d}days" "+%Y%m%d")
@@ -235,19 +225,19 @@ for d in $(seq 3 3); do
     rday=${refdate:6:2}
 	    
     # copy original 1h data
-    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/1h/grib/${pyear}${pmonth}${pday}/JLS${pmonth}${pday}0000${rmonth}${rday}*
+    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/1h/grib/${pyear}${pmonth}${pday}/JLS${pmonth}${pday}1200${rmonth}${rday}*
     echo "[$APPNAME] [1-3h] [$ryear/$rmonth/$rday] -- Copying original files ${filename}"
     cp $filename $dirin/
 	
     # iterate over timesteps
     echo "[$APPNAME] [1-3h] [$ryear/$rmonth/$rday] -- Iterating over timesteps"
-    for hh in $(seq 9 3 18) ; do
+    for hh in $(seq 0 6) ; do
 
 	# add a trailing 0 if the timestep is made by just 1 digit
 	if [[ hh -le 9 ]]; then
 	    hh=0${hh}
 	fi
-        fileg=JLS${pmonth}${pday}0000${rmonth}${rday}${hh}001
+        fileg=JLS${pmonth}${pday}1200${rmonth}${rday}${hh}001
         if [ -f $dirin/$fileg ] ; then
 	    echo "[$APPNAME] [1-3h] [$ryear/$rmonth/$rday] -- Processing file $fileg"
             Procfile $dirin/$fileg $ryear $rmonth $rday $hh
@@ -258,13 +248,13 @@ for d in $(seq 3 3); do
     done
 
     # copy original 3h data
-    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}0000${rmonth}${rday}*
+    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}1200${rmonth}${rday}*
     echo "[$APPNAME] [1-3h] [$ryear/$rmonth/$rday] -- Copying original files ${filename}"
     cp $filename $dirin
 	
     # iterate over timesteps
     echo "[$APPNAME] [1-3h] [$ryear/$rmonth/$rday] -- Iterating over timesteps"
-    for hh in $(seq 21 21) ; do
+    for hh in $(seq 9 3 21) ; do
 
 	# add a trailing 0 if the timestep is made by just 1 digit
 	if [[ hh -le 9 ]]; then
@@ -272,7 +262,7 @@ for d in $(seq 3 3); do
 	fi
 
 	# process input files
-        fileg=JLD${pmonth}${pday}0000${rmonth}${rday}${hh}001
+        fileg=JLD${pmonth}${pday}1200${rmonth}${rday}${hh}001
         if [ -f $dirin/$fileg ] ; then
 	    echo "[$APPNAME] [1-3h] [$ryear/$rmonth/$rday] -- Processing file $fileg"
             Procfile $dirin/$fileg $ryear $rmonth $rday $hh
@@ -287,9 +277,9 @@ for d in $(seq 3 3); do
     nyear=${rnextdate:0:4}
     nmonth=${rnextdate:4:2}
     nday=${rnextdate:6:2}
-    echo "[$APPNAME] [1-3h] -- Copying original files /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}0000${nmonth}${nday}00001"
-    cp /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}0000${nmonth}${nday}00001 $dirin
-    fileg=JLD${pmonth}${pday}0000${nmonth}${nday}00001
+    echo "[$APPNAME] [1-3h] -- Copying original files /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}1200${nmonth}${nday}00001"
+    cp /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}1200${nmonth}${nday}00001 $dirin
+    fileg=JLD${pmonth}${pday}1200${nmonth}${nday}00001
     Procfile $dirin/$fileg $nyear $nmonth $nday 00
 
     # merge timesteps
@@ -313,7 +303,6 @@ for d in $(seq 3 3); do
 
     # check that file has been correctly generated
     if [[ ! -e ${dirout}/${fileout} ]]; then
-	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!"
 	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee $LOGFILE
     fi
     
@@ -328,12 +317,16 @@ done
 #####################################################
 #
 # GENERATE 3H DATA
-# We generate data for DAY+4 and DAY+5
+# We generate data for DAY+5
 #
 #####################################################
 
 # iterate over days
-for d in $(seq 4 5); do
+for d in $(seq 5 5); do
+
+    # clean
+    rm -rf $dirin/*
+    rm -rf $dirwork/*
 
     # determine the day to produce
     refdate=$(date -d "${proddate}+${d}days" "+%Y%m%d")
@@ -345,7 +338,7 @@ for d in $(seq 4 5); do
     rday=${refdate:6:2}
 	    
     # copy original data
-    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}0000${rmonth}${rday}*
+    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}1200${rmonth}${rday}*
     echo "[$APPNAME] [3h] [$ryear/$rmonth/$rday] -- Copying original files ${filename}"
     cp $filename $dirin
 	
@@ -357,7 +350,7 @@ for d in $(seq 4 5); do
 	if [[ hh -le 9 ]]; then
 	    hh=0${hh}
 	fi
-        fileg=JLD${pmonth}${pday}0000${rmonth}${rday}${hh}001
+        fileg=JLD${pmonth}${pday}1200${rmonth}${rday}${hh}001
         if [ -f $dirin/$fileg ] ; then
 	    echo "[$APPNAME] [3h] [$ryear/$rmonth/$rday] -- Processing file $fileg"
             Procfile $dirin/$fileg $ryear $rmonth $rday $hh
@@ -372,9 +365,9 @@ for d in $(seq 4 5); do
     nyear=${rnextdate:0:4}
     nmonth=${rnextdate:4:2}
     nday=${rnextdate:6:2}
-    echo "[$APPNAME] [3h] -- Copying original files /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}0000${nmonth}${nday}00001"
-    cp /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}0000${nmonth}${nday}00001 $dirin
-    fileg=JLD${pmonth}${pday}0000${nmonth}${nday}00001
+    echo "[$APPNAME] [3h] -- Copying original files /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}1200${nmonth}${nday}00001"
+    cp /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}1200${nmonth}${nday}00001 $dirin
+    fileg=JLD${pmonth}${pday}1200${nmonth}${nday}00001
     Procfile $dirin/$fileg $nyear $nmonth $nday 00
 
     # merge timesteps
@@ -398,7 +391,6 @@ for d in $(seq 4 5); do
 
     # check that file has been correctly generated
     if [[ ! -e ${dirout}/${fileout} ]]; then
-	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!"
 	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee $LOGFILE
     fi
         
@@ -413,12 +405,16 @@ done
 #####################################################
 #
 # GENERATE 3+6H DATA
-# We generate data for DAY+6
+# We generate data for DAY+7
 #
 #####################################################
 
 # iterate over days
 for d in $(seq 6 6); do
+
+    # clean
+    rm -rf $dirin/*
+    rm -rf $dirwork/*
 
     # determine the day to produce
     refdate=$(date -d "${proddate}+${d}days" "+%Y%m%d")
@@ -430,19 +426,19 @@ for d in $(seq 6 6); do
     rday=${refdate:6:2}
 	    
     # copy original 3h data
-    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}0000${rmonth}${rday}*
+    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/3h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}1200${rmonth}${rday}*
     echo "[$APPNAME] [3+6h] [$ryear/$rmonth/$rday] -- Copying original files ${filename}"
     cp $filename $dirin/
 	
     # iterate over timesteps
     echo "[$APPNAME] [3+6h] [$ryear/$rmonth/$rday] -- Iterating over timesteps"
-    for hh in $(seq 0 0) ; do
+    for hh in $(seq 0 3 12) ; do
 
 	# add a trailing 0 if the timestep is made by just 1 digit
 	if [[ hh -le 9 ]]; then
 	    hh=0${hh}
 	fi
-        fileg=JLD${pmonth}${pday}0000${rmonth}${rday}${hh}001
+        fileg=JLD${pmonth}${pday}1200${rmonth}${rday}${hh}001
         if [ -f $dirin/$fileg ] ; then
 	    echo "[$APPNAME] [3+6h] [$ryear/$rmonth/$rday] -- Processing file $fileg"
             Procfile $dirin/$fileg $ryear $rmonth $rday $hh
@@ -453,19 +449,19 @@ for d in $(seq 6 6); do
     done
 
     # copy original 6h data
-    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/6h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}0000${rmonth}${rday}*
+    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/6h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}1200${rmonth}${rday}*
     echo "[$APPNAME] [3+6h] [$ryear/$rmonth/$rday] -- Copying original files ${filename}"
     cp $filename $dirin
 	
     # iterate over timesteps
     echo "[$APPNAME] [3+6h] [$ryear/$rmonth/$rday] -- Iterating over timesteps"
-    for hh in $(seq 6 6 18) ; do
+    for hh in $(seq 18 18) ; do
 
 	# add a trailing 0 if the timestep is made by just 1 digit
 	if [[ hh -le 9 ]]; then
 	    hh=0${hh}
 	fi
-        fileg=JLD${pmonth}${pday}0000${rmonth}${rday}${hh}001
+        fileg=JLD${pmonth}${pday}1200${rmonth}${rday}${hh}001
         if [ -f $dirin/$fileg ] ; then
 	    echo "[$APPNAME] [3+6h] [$ryear/$rmonth/$rday] -- Processing file $fileg"
             Procfile $dirin/$fileg $ryear $rmonth $rday $hh
@@ -480,9 +476,9 @@ for d in $(seq 6 6); do
     nyear=${rnextdate:0:4}
     nmonth=${rnextdate:4:2}
     nday=${rnextdate:6:2}
-    echo "[$APPNAME] [3+6h] -- Copying original files /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/6h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}0000${nmonth}${nday}00001"
-    cp /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/6h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}0000${nmonth}${nday}00001 $dirin
-    fileg=JLD${pmonth}${pday}0000${nmonth}${nday}00001
+    echo "[$APPNAME] [3+6h] -- Copying original files /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/6h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}1200${nmonth}${nday}00001"
+    cp /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/6h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}1200${nmonth}${nday}00001 $dirin
+    fileg=JLD${pmonth}${pday}1200${nmonth}${nday}00001
     Procfile $dirin/$fileg $nyear $nmonth $nday 00
 
     # merge timesteps
@@ -506,7 +502,6 @@ for d in $(seq 6 6); do
     
     # check that file has been correctly generated
     if [[ ! -e ${dirout}/${fileout} ]]; then
-	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!"
 	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee $LOGFILE
     fi
     
@@ -528,6 +523,10 @@ done
 # iterate over days
 for d in $(seq 7 8); do
 
+    # clean
+    rm -rf $dirin/*
+    rm -rf $dirwork/*
+
     # determine the day to produce
     refdate=$(date -d "${proddate}+${d}days" "+%Y%m%d")
     echo "[$APPNAME] [6h] -- Processing date $refdate"
@@ -538,7 +537,7 @@ for d in $(seq 7 8); do
     rday=${refdate:6:2}
 	    
     # copy original data
-    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/6h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}0000${rmonth}${rday}*
+    filename=/data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/6h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}1200${rmonth}${rday}*
     echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- Copying original files ${filename}"
     cp $filename $dirin
 	
@@ -551,7 +550,7 @@ for d in $(seq 7 8); do
 	    hh=0${hh}
 	fi
 	
-        fileg=JLD${pmonth}${pday}0000${rmonth}${rday}${hh}001
+        fileg=JLD${pmonth}${pday}1200${rmonth}${rday}${hh}001
         if [ -f $dirin/$fileg ] ; then
 	    echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- Processing file $fileg"
             Procfile $dirin/$fileg $ryear $rmonth $rday $hh
@@ -566,9 +565,9 @@ for d in $(seq 7 8); do
     nyear=${rnextdate:0:4}
     nmonth=${rnextdate:4:2}
     nday=${rnextdate:6:2}
-    echo "[$APPNAME] [6h] -- Copying original files /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/6h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}0000${nmonth}${nday}00001"
-    cp /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/6h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}0000${nmonth}${nday}00001 $dirin
-    fileg=JLD${pmonth}${pday}0000${rmonth}${rday}${hh}001
+    echo "[$APPNAME] [6h] -- Copying original files /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/6h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}1200${nmonth}${nday}00001"
+    cp /data/inputs/metocean/rolling/atmos/ECMWF/IFS_010/1.0forecast/6h/grib/${pyear}${pmonth}${pday}/JLD${pmonth}${pday}1200${nmonth}${nday}00001 $dirin
+    fileg=JLD${pmonth}${pday}1200${rmonth}${rday}${hh}001
     Procfile $dirin/$fileg $nyear $nmonth $nday 00
 
     # merge timesteps
