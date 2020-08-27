@@ -92,32 +92,32 @@ Procfile() {
     ncfileo=MED_${dateff}-${hourf}.nc 
     
     # What? Convert the grib to nc (1 timestep, a lot of variables)
-    cdo -r -f nc -t ecmwf copy $fileg ${dirwork}/tmp1_${dateff}_${hf}.nc 2>&1 | tee $LOGFILE
+    cdo -r -f nc -t ecmwf copy $fileg ${dirwork}/tmp1_${dateff}_${hf}.nc 2>&1 | tee -a $LOGFILE
     
     # set the timestep
-    cdo -settime,${hf}:00:00 -setdate,$dateff -settunits,hours -settaxis,1950-1-1,00:00 ${dirwork}/tmp1_${dateff}_${hf}.nc ${dirwork}/tmp2_${dateff}_${hf}.nc 2>&1 | tee $LOGFILE
+    cdo -settime,${hf}:00:00 -setdate,$dateff -settunits,hours -settaxis,1950-1-1,00:00 ${dirwork}/tmp1_${dateff}_${hf}.nc ${dirwork}/tmp2_${dateff}_${hf}.nc 2>&1 | tee -a $LOGFILE
 
     # crop
-    cdo sellonlatbox,-180,180,-90,90 ${dirwork}/tmp2_${dateff}_${hf}.nc ${dirwork}/tmp3_${dateff}_${hf}.nc 2>&1 | tee $LOGFILE
+    cdo sellonlatbox,-180,180,-90,90 ${dirwork}/tmp2_${dateff}_${hf}.nc ${dirwork}/tmp3_${dateff}_${hf}.nc 2>&1 | tee -a $LOGFILE
  
     # select only the desired variables   
-    ncks -O -h -O -d lon,57.,58. -d lat,-21.,-19. -v time,lon,lat,U10M,V10M ${dirwork}/tmp2_${dateff}_${hf}.nc ${dirwork}/$ncfileo 2>&1 | tee $LOGFILE
+    ncks -O -h -O -d lon,57.,58. -d lat,-21.,-19. -v time,lon,lat,U10M,V10M ${dirwork}/tmp2_${dateff}_${hf}.nc ${dirwork}/$ncfileo 2>&1 | tee -a $LOGFILE
     
     if [[ ! ${PIPESTATUS[0]} -eq 0 ]]; then
 	
 	    echo "--- Long procedure! ---"
 
 	    # select only the desired variable
-	    ncks -O -h -O -d lon_2,57.,58. -d lat_2,-21.,-19. -v time,lon_2,lat_2,U10M,V10M ${dirwork}/tmp2_${dateff}_${hf}.nc ${dirwork}/${ncfileo}4 2>&1 | tee $LOGFILE
+	    ncks -O -h -O -d lon_2,57.,58. -d lat_2,-21.,-19. -v time,lon_2,lat_2,U10M,V10M ${dirwork}/tmp2_${dateff}_${hf}.nc ${dirwork}/${ncfileo}4 2>&1 | tee -a $LOGFILE
 	    
 	    # convert to netcdf3 to invoke ncrename	    
-	    ncks -O -3 ${dirwork}/${ncfileo}4 ${dirwork}/${ncfileo}3 2>&1 | tee $LOGFILE
+	    ncks -O -3 ${dirwork}/${ncfileo}4 ${dirwork}/${ncfileo}3 2>&1 | tee -a $LOGFILE
 	    
 	    # ncrename
-	    ncrename -O -d lat_2,lat -d lon_2,lon -v lon_2,lon -v lat_2,lat ${dirwork}/${ncfileo}3 2>&1 | tee $LOGFILE
+	    ncrename -O -d lat_2,lat -d lon_2,lon -v lon_2,lon -v lat_2,lat ${dirwork}/${ncfileo}3 2>&1 | tee -a $LOGFILE
 
 	    # back to netcdf 4
-	    ncks -O -4 ${dirwork}/${ncfileo}3 ${dirwork}/${ncfileo} 2>&1 | tee $LOGFILE
+	    ncks -O -4 ${dirwork}/${ncfileo}3 ${dirwork}/${ncfileo} 2>&1 | tee -a $LOGFILE
 	    
     fi
 }
@@ -191,7 +191,7 @@ for d in $(seq 0 2); do
     # merge timesteps
     echo "[$APPNAME] [1h] [$ryear/$rmonth/$rday] -- Merging timesteps..."
     fileout="${ryear}${rmonth}${rday}.nc"
-    ncrcat -h ${dirwork}/MED_${ryear}-${rmonth}-${rday}-*.nc ${dirout}/${fileout}  2>&1 | tee $LOGFILE
+    ncrcat -h ${dirwork}/MED_${ryear}-${rmonth}-${rday}-*.nc ${dirout}/${fileout}  2>&1 | tee -a $LOGFILE
 
     # clean work directory
     echo "[$APPNAME] [1h] [$ryear/$rmonth/$rday] -- Cleaning work directory..."
@@ -202,7 +202,7 @@ for d in $(seq 0 2); do
     # check that file has been correctly generated
     if [[ ! -e ${dirout}/${fileout} ]]; then
 	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!"
-	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee $LOGFILE
+	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee -a $LOGFILE
     fi
        
     # move file to final directory
@@ -295,15 +295,15 @@ for d in $(seq 3 3); do
     # merge timesteps
     echo "[$APPNAME] [1-3h] [$ryear/$rmonth/$rday] -- Merging timesteps..."
     fileout="${ryear}${rmonth}${rday}.nc"
-    ncrcat -h ${dirwork}/MED_${ryear}-${rmonth}-${rday}-*.nc ${dirwork}/MED_${nyear}-${nmonth}-${nday}-00.nc ${dirwork}/${fileout}_MERGED 2>&1 | tee $LOGFILE
+    ncrcat -h ${dirwork}/MED_${ryear}-${rmonth}-${rday}-*.nc ${dirwork}/MED_${nyear}-${nmonth}-${nday}-00.nc ${dirwork}/${fileout}_MERGED 2>&1 | tee -a $LOGFILE
 
     # interpolate
     echo "[$APPNAME] [1-3h] [$ryear/$rmonth/$rday] -- Interpolating..."
-    cdo -inttime,${ryear}-${rmonth}-${rday},00:00,1hour ${dirwork}/${fileout}_MERGED ${dirwork}/${fileout}_INTERP 2>&1 | tee $LOGFILE
+    cdo -inttime,${ryear}-${rmonth}-${rday},00:00,1hour ${dirwork}/${fileout}_MERGED ${dirwork}/${fileout}_INTERP 2>&1 | tee -a $LOGFILE
     
     # remove last timestep
     echo "[$APPNAME] [1-3h] [$ryear/$rmonth/$rday] -- Removing last timestep..."
-    ncks -O -d time,1,24 ${dirwork}/${fileout}_INTERP ${dirout}/${fileout} 2>&1 | tee $LOGFILE
+    ncks -O -d time,1,24 ${dirwork}/${fileout}_INTERP ${dirout}/${fileout} 2>&1 | tee -a $LOGFILE
     
     # clean work directory    
     echo "[$APPNAME] [1-3h] -- Cleaning work directory..."
@@ -314,7 +314,7 @@ for d in $(seq 3 3); do
     # check that file has been correctly generated
     if [[ ! -e ${dirout}/${fileout} ]]; then
 	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!"
-	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee $LOGFILE
+	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee -a $LOGFILE
     fi
     
     # move file to final directory
@@ -380,15 +380,15 @@ for d in $(seq 4 5); do
     # merge timesteps
     echo "[$APPNAME] [3h] [$ryear/$rmonth/$rday] -- Merging timesteps..."
     fileout="${ryear}${rmonth}${rday}.nc"
-    ncrcat -h ${dirwork}/MED_${ryear}-${rmonth}-${rday}-*.nc ${dirwork}/MED_${nyear}-${nmonth}-${nday}-00.nc ${dirwork}/${fileout}_MERGED 2>&1 | tee $LOGFILE
+    ncrcat -h ${dirwork}/MED_${ryear}-${rmonth}-${rday}-*.nc ${dirwork}/MED_${nyear}-${nmonth}-${nday}-00.nc ${dirwork}/${fileout}_MERGED 2>&1 | tee -a $LOGFILE
 
     # interpolate
     echo "[$APPNAME] [3h] [$ryear/$rmonth/$rday] -- Interpolating..."
-    cdo -inttime,${ryear}-${rmonth}-${rday},00:00,1hour ${dirwork}/${fileout}_MERGED ${dirwork}/${fileout}_INTERP 2>&1 | tee $LOGFILE
+    cdo -inttime,${ryear}-${rmonth}-${rday},00:00,1hour ${dirwork}/${fileout}_MERGED ${dirwork}/${fileout}_INTERP 2>&1 | tee -a $LOGFILE
 
     # remove last timestep
     echo "[$APPNAME] [3h] [$ryear/$rmonth/$rday] -- Removing last timestep..."
-    ncks -O -d time,1,24 ${dirwork}/${fileout}_INTERP ${dirout}/${fileout} 2>&1 | tee $LOGFILE
+    ncks -O -d time,1,24 ${dirwork}/${fileout}_INTERP ${dirout}/${fileout} 2>&1 | tee -a $LOGFILE
     
     # clean work directory
     echo "[$APPNAME] [3h] -- Cleaning work directory..."
@@ -399,7 +399,7 @@ for d in $(seq 4 5); do
     # check that file has been correctly generated
     if [[ ! -e ${dirout}/${fileout} ]]; then
 	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!"
-	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee $LOGFILE
+	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee -a $LOGFILE
     fi
         
     # move file to final directory
@@ -488,15 +488,15 @@ for d in $(seq 6 6); do
     # merge timesteps
     echo "[$APPNAME] [3+6h] [$ryear/$rmonth/$rday] -- Merging timesteps..."
     fileout="${ryear}${rmonth}${rday}.nc"
-    ncrcat -h ${dirwork}/MED_${ryear}-${rmonth}-${rday}-*.nc ${dirwork}/MED_${nyear}-${nmonth}-${nday}-00.nc ${dirwork}/${fileout}_MERGED 2>&1 | tee $LOGFILE
+    ncrcat -h ${dirwork}/MED_${ryear}-${rmonth}-${rday}-*.nc ${dirwork}/MED_${nyear}-${nmonth}-${nday}-00.nc ${dirwork}/${fileout}_MERGED 2>&1 | tee -a $LOGFILE
 
     # interpolate
     echo "[$APPNAME] [3+6h] [$ryear/$rmonth/$rday] -- Interpolating..."
-    cdo -inttime,${ryear}-${rmonth}-${rday},00:00,1hour ${dirwork}/${fileout}_MERGED ${dirwork}/${fileout}_INTERP 2>&1 | tee $LOGFILE
+    cdo -inttime,${ryear}-${rmonth}-${rday},00:00,1hour ${dirwork}/${fileout}_MERGED ${dirwork}/${fileout}_INTERP 2>&1 | tee -a $LOGFILE
     
     # remove last timestep
     echo "[$APPNAME] [3+6h] [$ryear/$rmonth/$rday] -- Removing the last timestep..."
-    ncks -O -d time,1,24 ${dirwork}/${fileout}_INTERP ${dirout}/${fileout} 2>&1 | tee $LOGFILE
+    ncks -O -d time,1,24 ${dirwork}/${fileout}_INTERP ${dirout}/${fileout} 2>&1 | tee -a $LOGFILE
     
     # clean work directory
     echo "[$APPNAME] [3+6h] [$ryear/$rmonth/$rday]  -- Cleaning work directory..."
@@ -507,7 +507,7 @@ for d in $(seq 6 6); do
     # check that file has been correctly generated
     if [[ ! -e ${dirout}/${fileout} ]]; then
 	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!"
-	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee $LOGFILE
+	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee -a $LOGFILE
     fi
     
     # move file to final directory
@@ -574,15 +574,15 @@ for d in $(seq 7 8); do
     # merge timesteps
     echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- Merging timesteps..."
     fileout="${ryear}${rmonth}${rday}.nc"
-    ncrcat -h ${dirwork}/MED_${ryear}-${rmonth}-${rday}-*.nc ${dirwork}/MED_${nyear}-${nmonth}-${nday}-00.nc ${dirwork}/${fileout}_MERGED 2>&1 | tee $LOGFILE
+    ncrcat -h ${dirwork}/MED_${ryear}-${rmonth}-${rday}-*.nc ${dirwork}/MED_${nyear}-${nmonth}-${nday}-00.nc ${dirwork}/${fileout}_MERGED 2>&1 | tee -a $LOGFILE
 
     # interpolate
     echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- Interpolating..."
-    cdo -inttime,${ryear}-${rmonth}-${rday},00:00,1hour ${dirwork}/${fileout}_MERGED ${dirwork}/${fileout}_INTERP 2>&1 | tee $LOGFILE
+    cdo -inttime,${ryear}-${rmonth}-${rday},00:00,1hour ${dirwork}/${fileout}_MERGED ${dirwork}/${fileout}_INTERP 2>&1 | tee -a $LOGFILE
 
     # remove last timestep
     echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- Removing last timestep..."
-    ncks -O -d time,1,24 ${dirwork}/${fileout}_INTERP ${dirout}/${fileout} 2>&1 | tee $LOGFILE
+    ncks -O -d time,1,24 ${dirwork}/${fileout}_INTERP ${dirout}/${fileout} 2>&1 | tee -a $LOGFILE
 
     # clean work directory
     echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- Cleaning work directory..."
@@ -592,7 +592,7 @@ for d in $(seq 7 8); do
 
     # check that file has been correctly generated
     if [[ ! -e ${dirout}/${fileout} ]]; then
-	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee $LOGFILE
+	echo "[$APPNAME] [6h] [$ryear/$rmonth/$rday] -- ERROR: file ${fileout} not generated!" 2>&1 | tee -a $LOGFILE
     fi
     
     # move file to final directory
